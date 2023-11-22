@@ -30,12 +30,6 @@ def transform(df: DataFrame) -> DataFrame:
     returns:
         df (DataFrame): pandas dataframe containing the clean data
     '''
-
-    # drop null values
-    df.dropna(inplace=True)
-
-    # remove decimal from year column and convert to string
-    df.Year = df.Year.astype('int').astype("str")
     
     return df
 
@@ -51,6 +45,4 @@ def load(df: DataFrame, save_path: str):
         None
     '''
 
-    # write dataframe to csv
-    df.to_csv(save_path, index=False)
     return
