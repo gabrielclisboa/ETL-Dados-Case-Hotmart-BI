@@ -1,3 +1,8 @@
 *__pycache__/
-data/*sales_data_202309132316.csv
+# Ignorar o conteúdo das pastas data e result
+data/*
 result/*
+
+# Permitir o rastreamento das pastas em si
+!data/.gitkeep
+!result/.gitkeep
