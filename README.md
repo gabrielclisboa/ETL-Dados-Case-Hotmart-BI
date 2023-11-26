@@ -41,9 +41,10 @@ Certifique-se de estar na pasta correta antes de executar os comandos `pip`.
 ## Execução do Projeto
 
 1. **Adicionar arquivo CSV de vendas ao projeto :**
+2. 
     -Adicione o arquivo `sales_data_202309132316.csv` na pasta `result/`
 
-2. **Executar o projeto:**
+3. **Executar o projeto:**
 
     - Para executar o projeto, basta rodar o script `pipeline.py`:
     ```bash
