@@ -1,7 +1,8 @@
 import pandas as pd
-from pandas.core.frame import DataFrame
+import random
 import os
-from datetime import datetime
+from pandas.core.frame import DataFrame
+from faker import Faker
 
 def extract(file_path: str) -> DataFrame:
     '''
@@ -15,7 +16,11 @@ def extract(file_path: str) -> DataFrame:
     '''
 
     # extracts the csv data as pandas dataframe 
+    print("Iniciando extração dos dados...")
+
     df = pd.read_csv(file_path)
+
+    print("Extração executada com sucesso!")
 
     return df
 
@@ -30,24 +35,37 @@ def transform(df: DataFrame) -> DataFrame:
         df (DataFrame): pandas dataframe containing the clean data
     '''
 
+    print("Iniciando transformação dos dados...")
+
+    fake = Faker('pt_BR') 
+
+    # Transformação para a Tabela Dimensão Produtor Afiliado
+
+    # Z-score
     df['purchase_value'] = (df['purchase_value'] - 60) / 100
     df['purchase_value'] = df['purchase_value'].apply(lambda x: x if x >= 0 else -1 * x)
 
     dim_afiliado = df[['affiliate_id']].drop_duplicates()
-    dim_afiliado['name'] = '' 
-    dim_afiliado['sales_history'] = 0 
+    dim_afiliado['name'] = dim_afiliado['affiliate_id'].apply(lambda x: fake.name())
+    dim_afiliado['sales_history'] = df.groupby('affiliate_id').size().reindex(dim_afiliado['affiliate_id']).fillna(0).astype(int).values
     dim_afiliado['creation_date'] = pd.to_datetime('now')
-    dim_afiliado['status'] = True 
-    dim_afiliado['email'] = '' 
-  
+    dim_afiliado['status'] = True
+    dim_afiliado['email'] = dim_afiliado['affiliate_id'].apply(lambda x: fake.email())
+
+
+    # Transformação para a Tabela Dimensão Produtor
+
+    # Filtrar vendas onde affiliate_id é igual a producer_id
+    vendas_do_produtor = df[df['affiliate_id'] == df['producer_id']]
+ 
     dim_produtor = df[['producer_id']].drop_duplicates()
-    dim_produtor['name'] = ''  
-    dim_produtor['address'] = ''  
-    dim_produtor['email'] = '' 
-    dim_produtor['sale_volume'] = 0 
+    dim_produtor['name'] = dim_produtor['producer_id'].apply(lambda x: fake.name()) 
+    dim_produtor['address'] = dim_produtor['producer_id'].apply(lambda x: fake.address().replace('\n', ' ').strip());  
+    dim_produtor['email'] = dim_produtor['producer_id'].apply(lambda x: fake.email())
+    dim_produtor['sales_history'] = vendas_do_produtor['producer_id'].value_counts().reindex(dim_produtor['producer_id']).fillna(0).astype(int).values
     dim_produtor['status'] = True
     dim_produtor['creation_date'] = pd.to_datetime('now')
-    dim_produtor['rating'] = 0.0 
+    dim_produtor['rating'] = dim_produtor['producer_id'].apply(lambda x: round(random.uniform(0, 5), 1))
 
     # Transformação para a Tabela Fato Venda
     fato_venda = df[[
@@ -59,22 +77,23 @@ def transform(df: DataFrame) -> DataFrame:
 
     # Transformação para a Tabela Dimensão Comprador
     dim_comprador = df[['buyer_id']].drop_duplicates()
-    dim_comprador['name'] = ''  
-    dim_comprador['address'] = '' 
-    dim_comprador['email'] = '' 
-    dim_comprador['age'] = 0 
+    dim_comprador['name'] = dim_comprador['buyer_id'].apply(lambda x: fake.name()) 
+    dim_comprador['address'] = dim_comprador['buyer_id'].apply(lambda x: fake.address())  
+    dim_comprador['email'] = dim_comprador['buyer_id'].apply(lambda x: fake.email())
+    dim_comprador['age'] = dim_comprador['buyer_id'].apply(lambda x: random.randint(18, 70)) 
     dim_comprador['status'] = True  
     dim_comprador['creation_date'] = pd.to_datetime('now')
 
     # Transformação para a Tabela Dimensão Segmento do Usuário
-    dim_segmento_usuario = pd.DataFrame(index=df.index)  # Creating a DataFrame with the same index as df
-
+    dim_segmento_usuario = pd.DataFrame(index=df.index)  
     dim_segmento_usuario['user_segment_id'] = df.index + 1
     dim_segmento_usuario['category_name'] = ''  
     dim_segmento_usuario['date_sale'] = pd.to_datetime('now')
     dim_segmento_usuario['last_category'] = 0  
-    dim_segmento_usuario['current_category'] = ''  
+    dim_segmento_usuario['current_category'] = ''
 
+
+    print("Transformação dos dados executada com sucesso!")  
 
     # Retornar os DataFrames transformados
     return dim_afiliado, dim_produtor, fato_venda, dim_comprador, dim_segmento_usuario
@@ -108,14 +127,22 @@ def run_pipeline():
     dim_afiliado, dim_produtor, fato_venda, dim_comprador, dim_segmento_usuario = transform(df)
 
     # Salva os resultados na pasta 'result'
+    print("Iniciando carregamento dos dados...")
+
     os.makedirs(result_path, exist_ok=True)
-    load(dim_afiliado, result_path+"/dim_afiliado.csv")
-    load(dim_produtor, result_path+"/dim_produtor.csv")
-    load(fato_venda, result_path+"/fato_venda.csv")
-    load(dim_comprador,result_path+"/dim_comprador.csv")
-    load(dim_segmento_usuario,result_path+"/dim_segmento_usuario.csv")
+    load(dim_afiliado, result_path+"dim_afiliado.csv")
+    load(dim_produtor, result_path+"dim_produtor.csv")
+    load(fato_venda, result_path+"fato_venda.csv")
+    load(dim_comprador,result_path+"dim_comprador.csv")
+    load(dim_segmento_usuario,result_path+"dim_segmento_usuario.csv")
+
+    print("Carregamento dos dados executado com sucesso!")
+    print("ETL finalizado.")
 
 
 if __name__ == "__main__":
     # run pipeline
+
+    print("Iniciando ETL...")
+
     run_pipeline()
